@@ -35,7 +35,7 @@ class Calculator:
         col = 4
         row = 5
 
-        form = sg.FlexForm("PySimpleCalculator", auto_size_text=True, auto_size_buttons=False, default_element_size=(40, 1), default_button_element_size=(4, 1), scale=(1, 1), background_color="#222631")
+        form = sg.FlexForm("PySimpleCalculator", auto_size_text=True, auto_size_buttons=False, default_element_size=(40, 1), default_button_element_size=(4, 1), background_color="#222631")
         layout = [[sg.Text(self.temp, key="displayResult", size=(15, 3), font=("Consolas", 30), justification="right", text_color="white", background_color="#222631")]]
         
         buttonColor = "#333949"
@@ -54,9 +54,9 @@ class Calculator:
                     buttonColor = "#333949"
                 
                 if buttons[i][j] == "del":
-                    res.append(sg.ReadFormButton(buttons[i][j], image_filename="icon/outline_backspace_white_18dp.png", image_size=(78, 63), image_subsample=1, button_color=("white", buttonColor), font=("Consolas", 25)))
+                    res.append(sg.RButton(buttons[i][j], image_filename="icon/outline_backspace_white_18dp.png", image_size=(78, 63), image_subsample=1, button_color=("white", buttonColor), font=("Consolas", 25)))
                 else:
-                    res.append(sg.ReadFormButton(buttons[i][j], button_color=("white", buttonColor), font=("Consolas", 25)))
+                    res.append(sg.RButton(buttons[i][j], button_color=("white", buttonColor), font=("Consolas", 25)))
             layout.append(res)
 
         form.LayoutAndRead(layout)
@@ -68,13 +68,9 @@ class Calculator:
             else: # otherwise, pass value to controller
                 self.ctrl.addInput(button)
                 self.temp = self.ctrl.onHandle()
-
-                # check if self.temp is an empty string
-                if not self.temp:
-                    self.temp = "0"
                 
                 # update displayResult text
-                form.FindElement("displayResult").Update(self.temp)
+                form.FindElement("displayResult").Update(self.temp[0])
 
 
 if __name__ == "__main__":

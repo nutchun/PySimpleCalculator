@@ -1,4 +1,5 @@
 # This class is used to control this program
+# (it the same class in https://github.com/nutchun/PyCalculator)
 # e.g. calculate an equation
 # 
 # You can visit my repository at
@@ -13,7 +14,6 @@
 # Email: nut.ch40@gmail.com
 
 import operator
-# from main import *
 
 class Controller:
     """Control almost everything in calculator"""
@@ -29,6 +29,7 @@ class Controller:
         self.reset = False
         self.keydown = False
         self.inputLength = 0
+        self.maxchar = 1
     
     @property
     def temps(self):
@@ -43,6 +44,9 @@ class Controller:
 
     def setInputLength(self, length):
         self.inputLength = length
+    
+    def setMaxChar(self, maxchar):
+        self.maxchar = maxchar
 
     def addInput(self, input):
         self.currentInput = input
@@ -166,10 +170,225 @@ class Controller:
             return int(num)
         return num
     
+    def getResult(self):
+        try:
+            if self.equation[-1] in self.operators or self.equation[-1] == "xʸ":
+                self.equation.pop()
+            if self.parentheses > 0:
+                for i in range(self.parentheses):
+                    self.equation.append(")")
+                    self.parentheses -= 1
+            result = self.onCalculate(self.equation)
+            # if isinstance(result, complex):
+            #     result = complex()
+            self.equation = [str(result)]
+        except IndexError:
+            self.equation = ["Invalid input"]
+        except ValueError:
+            self.equation = ["Invalid input"]
+        except ZeroDivisionError:
+            self.equation = ["Error: Division by zero"]
+        except:
+            self.equation = []
+        finally:
+            self.reset = True
+    
+    def addNumber(self):
+        if self.equation[-1] in self.operators or self.equation[-1] == "-(" or self.equation[-1] == "(" or self.equation[-1] == "√(":
+            self.equation.append(self.currentInput)
+        elif self.equation[-1] == ")":
+            while self.equation[-1] not in ["(", "-(", "√("]:
+                if self.equation[-1] == ")":
+                    self.parentheses += 1
+                self.equation.pop()
+            self.equation.append(self.currentInput)
+            # self.parentheses += 1
+        elif self.equation[-1] == "0":
+            self.equation[-1] = self.currentInput
+        else:
+            self.equation[-1] += self.currentInput
+    
+    def addDecPoint(self):
+        if self.equation[-1] in self.operators:
+            self.equation.append("0.")
+        elif self.equation[-1] == "(" or self.equation[-1] == "-(" or self.equation[-1] == "√(":
+            self.equation.append("0.")
+        elif self.equation[-1] == ")":
+            self.equation.append("×")
+            self.equation.append(self.currentInput)
+        elif self.currentInput not in self.equation[-1]:
+            self.equation[-1] += self.currentInput
+    
+    def addOperator(self):
+        if self.equation[-1] in self.operators:
+            self.equation[-1] = self.currentInput
+        elif self.equation[-1][-1] == ".":
+            if self.equation[-1][:-1] != "0":
+                self.equation[-1] = self.equation[-1][:-1]
+                self.equation.append(self.currentInput)
+            else:
+                try:
+                    if self.equation[-2] == "+" or self.equation[-2] == "-":
+                        self.equation.pop()
+                        self.equation.pop()
+                        self.equation.append(self.currentInput)
+                except IndexError:
+                    self.equation.pop()
+        elif self.equation[-1] == "(" or self.equation[-1] == "-(" or self.equation[-1] == "√(":
+            try:
+                while self.equation[-1] not in self.operators:
+                    self.equation.pop()
+                    self.parentheses -= 1
+                self.equation.pop()
+                self.equation.append(self.currentInput)
+            except IndexError:
+                pass
+        else:
+            self.equation.append(self.currentInput)
+
+    def addPlusMinus(self):
+        if self.equation[-1] in self.operators or self.equation[-1] == "(" or self.equation[-1] == "-(" or self.equation[-1] == "√(":
+            self.equation.append("-(")
+            self.parentheses += 1
+        elif self.equation[-1] == ")":
+            self.equation.append("×")
+            self.equation.append("-(")
+            self.parentheses += 1
+        else:
+            self.equation[-1] = str(self.checkInt(float(self.equation[-1]) * -1))
+
+    def addOpenedParenthesis(self):
+        if self.equation[-1] in self.operators or self.equation[-1] == "(" or self.equation[-1] == "-(" or self.equation[-1] == "√(":
+            self.equation.append(self.currentInput)
+            self.parentheses += 1
+        elif self.equation[-1] == ")":
+            self.equation.pop()
+            self.parentheses += 1
+        else:
+            res = self.equation[-1]
+            self.equation[-1] = self.currentInput
+            self.equation.append(res)
+            # self.equation.append("×")
+            # self.equation.append(self.currentInput)
+            self.parentheses += 1
+
+    def addClosedParenthesis(self):
+        if self.equation[-1] == "(" or self.equation[-1] == "-(" or self.equation[-1] == "√(":
+            self.equation.pop()
+            self.parentheses -= 1
+        elif self.parentheses != 0:
+            if self.equation[-1] in self.operators:
+                self.equation.pop()
+            self.equation.append(self.currentInput)
+            self.parentheses -= 1
+    
+    def addSqrt(self):
+        if self.equation[-1] == ")":
+            left = 0
+            n = 0
+            for i in range(-1, -len(self.equation) - 1, -1):
+                if self.equation[i] == ")":
+                    n += 1
+                elif self.equation[i] == "(" or self.equation[i] == "-(" or self.equation[i] == "√(":
+                    n -= 1
+                    left = i
+                if n == 0 and left != 0:
+                    left = i
+                    break
+            res = self.equation[left:]
+            self.equation = self.equation[:left]
+            self.equation.append("√(")
+            self.equation += res
+            self.equation.append(")")
+        elif not (self.equation[-1] in self.operators or self.equation[-1] == "(" or self.equation[-1] == "-(" or self.equation[-1] == "√("):
+            num = self.equation[-1]
+            self.equation[-1] = "√("
+            self.equation.append(num)
+            self.equation.append(")")
+        else:
+            # if not (self.equation[-1] in self.operators or self.equation[-1] == "(" or self.equation[-1] == "-(" or self.equation[-1] == "√("):
+            #     self.equation.append("×")
+            self.equation.append("√(")
+            self.parentheses += 1
+    
+    def addPercent(self):
+        if len(self.equation) > 2:
+            left = 0
+            if self.equation[-1] == ")":
+                # left = 0
+                n = 0
+                for i in range(-1, -len(self.equation) - 1, -1):
+                    if self.equation[i] == ")":
+                        n += 1
+                    elif self.equation[i] == "(" or self.equation[i] == "-(" or self.equation[i] == "√(":
+                        n -= 1
+                        left = i
+                    if n == 0 and left != 0:
+                        left = i
+                        break
+                num = self.equation[left:]
+                oper = self.equation[left - 1]
+            else:
+                num = [self.equation[-1]]
+                oper = self.equation[-2]
+                left = -1
+            res = ""
+            right = left - 1
+            if self.equation[left - 2] == ")":
+                # left = 0
+                n = 0
+                for i in range(left - 2, -len(self.equation) - 1, -1):
+                    if self.equation[i] == ")":
+                        n += 1
+                    elif self.equation[i] == "(" or self.equation[i] == "-(" or self.equation[i] == "√(":
+                        n -= 1
+                        left = i
+                    if n == 0 and left != 0:
+                        left = i
+                        break
+                res = self.equation[left:right]
+            else:
+                res = [self.equation[right - 1]]
+            if oper == "+" or oper == "-":
+                self.equation = self.equation[:right + 1]
+                eq = res + ["×"] + num + ["÷"] + ["100"]
+                self.equation += [str(self.onCalculate(eq))]
+            elif oper == "×" or oper == "÷" or oper == "xʸ":
+                self.equation.append("÷")
+                self.equation.append("100")
+        else:
+            if self.equation[-1] not in self.operators and self.equation[-1] != "(" and self.equation[-1] != "-(" and self.equation[-1] != "√(":
+                self.equation.append("÷")
+                self.equation.append("100")
+    
+    def formatEquation(self, equation):
+        temp = ""
+        if equation:
+            for i in equation:
+                if i in self.operators:
+                    temp += " " + i + " "
+                else:
+                    temp += i
+        else:
+            return "0"
+        return temp
+
+    def popEquation(self):
+        if self.equation[-1] in self.operators or self.equation[-1] == "+/-":
+            self.equation.pop()
+        elif self.equation[-1] == "(" or self.equation[-1] == "-(" or self.equation[-1] == "√(":
+            self.equation.pop()
+            self.parentheses -= 1
+        elif self.equation[-1] == ")":
+            self.equation.pop()
+            self.parentheses += 1
+        else:
+            self.equation[-1] = self.equation[-1][:-1]
+            if not self.equation[-1]:
+                self.equation.pop()
+
     def onHandle(self):
         """Handle the input"""
-        
-        pointer = 0
 
         if self.reset and self.currentInput in self.numbers:
             self.equation = []
@@ -189,265 +408,77 @@ class Controller:
             elif self.currentInput == "(":
                 self.equation.append(self.currentInput)
                 self.parentheses += 1
-            # elif self.currentInput == "+/-":
-            #     self.equation.append("-(")
-            #     self.parentheses += 1
+            elif self.currentInput == "+/-":
+                self.equation.append("-(")
+                self.parentheses += 1
             elif self.currentInput == "√x":
                 self.equation.append("√(")
                 self.parentheses += 1
-            elif self.currentInput == "del" or self.currentInput == "AC" or self.currentInput == "C":
-                self.temp = "0"
+            # elif self.currentInput == "del" or self.currentInput == "AC" or self.currentInput == "C":
+                # self.temp = "0"
             # self.temp = " ".join(self.equation)
+
         # not empty
         else:
             ##################################################
             # when clear
             if self.currentInput == "AC" or self.currentInput == "C":
                 self.equation = []
-                self.temp = "0"
                 self.parentheses = 0
             
             ##################################################
             # when pressed backspace
             elif self.currentInput == "del":
-                if self.equation[-1] in self.operators or self.equation[-1] == "+/-":
-                    self.equation.pop()
-                    # self.temp = self.temp[:-3]
-                elif self.equation[-1] == "(" or self.equation[-1] == "-(" or self.equation[-1] == "√(":
-                    self.equation.pop()
-                    # self.temp = self.temp[:-1]
-                    self.parentheses -= 1
-                elif self.equation[-1] == ")":
-                    self.equation.pop()
-                    # self.temp = self.temp[:-1]
-                    self.parentheses += 1
-                else:
-                    self.equation[-1] = self.equation[-1][:-1]
-                    if not self.equation[-1]:
-                        self.equation.pop()
-                    # self.temp = self.temp[:-1]
+                self.popEquation()
             
             ##################################################
             elif self.currentInput == "=":
-                try:
-                    if self.equation[-1] in self.operators or self.equation[-1] == "xʸ":
-                        self.equation.pop()
-                    if self.parentheses > 0:
-                        for i in range(self.parentheses):
-                            self.equation.append(")")
-                            self.parentheses -= 1
-                    t = self.equation
-                    result = self.onCalculate(t)
-                    # if isinstance(result, complex):
-                    #     result = complex()
-                    self.temp = result
-                    self.equation = [str(result)]
-                    self.reset = True
-                except IndexError:
-                    self.equation = ["Invalid input"]
-                    self.temp = "Invalid input"
-                except ZeroDivisionError:
-                    self.equation = ["Error: Division by zero"]
-                    self.temp = "Error: Division by zero"
+                self.getResult()
             
             # prevent user to insert input if its length more than 42 chars
-            if self.inputLength < 42:
+            if self.inputLength < self.maxchar:
 
                 ##################################################
                 # when insert numbers
                 if self.currentInput in self.numbers:
-                    if self.equation[-1] in self.operators or self.equation[-1] == "-(" or self.equation[-1] == "(" or self.equation[-1] == "√(":
-                        self.equation.append(self.currentInput)
-                        # self.temp += self.currentInput
-                    elif self.equation[-1] == ")":
-                        while self.equation[-1] not in ["(", "-(", "√("]:
-                            if self.equation[-1] == ")":
-                                self.parentheses += 1
-                            self.equation.pop()
-                        self.equation.append(self.currentInput)
-                        # self.parentheses += 1
-                    elif self.equation[-1] == "0":
-                        self.equation[-1] = self.currentInput
-                    else:
-                        self.equation[-1] += self.currentInput
+                    self.addNumber()
                 
                 ##################################################
                 # when insert a decimal point
                 elif self.currentInput == ".":
-                    if self.equation[-1] in self.operators:
-                        self.equation.append("0.")
-                    elif self.equation[-1] == "(" or self.equation[-1] == "-(" or self.equation[-1] == "√(":
-                        self.equation.append("0.")
-                    elif self.equation[-1] == ")":
-                        self.equation.append("×")
-                        self.equation.append(self.currentInput)
-                    elif self.currentInput not in self.equation[-1]:
-                        self.equation[-1] += self.currentInput
+                    self.addDecPoint()
                 
                 ##################################################
                 # when insert operators
                 elif self.currentInput in self.operators:
-                    if self.equation[-1] in self.operators:
-                        self.equation[-1] = self.currentInput
-                    elif self.equation[-1][-1] == ".":
-                        if self.equation[-1][:-1] != "0":
-                            self.equation[-1] = self.equation[-1][:-1]
-                            self.equation.append(self.currentInput)
-                        else:
-                            try:
-                                if self.equation[-2] == "+" or self.equation[-2] == "-":
-                                    self.equation.pop()
-                                    self.equation.pop()
-                                    self.equation.append(self.currentInput)
-                            except IndexError:
-                                self.equation.pop()
-                    elif self.equation[-1] == "(" or self.equation[-1] == "-(" or self.equation[-1] == "√(":
-                        try:
-                            while self.equation[-1] not in self.operators:
-                                self.equation.pop()
-                                self.parentheses -= 1
-                            self.equation.pop()
-                            self.equation.append(self.currentInput)
-                        except IndexError:
-                            pass
-                    else:
-                        self.equation.append(self.currentInput)
+                    self.addOperator()
                 
                 ##################################################
                 # when toggle between positive and negertive value
                 elif self.currentInput == "+/-":
-                    if self.equation[-1] in self.operators or self.equation[-1] == "(" or self.equation[-1] == "-(" or self.equation[-1] == "√(":
-                        self.equation.append("-(")
-                        self.parentheses += 1
-                    elif self.equation[-1] == ")":
-                        self.equation.append("×")
-                        self.equation.append("-(")
-                        self.parentheses += 1
-                    else:
-                        self.equation[-1] = str(self.checkInt(float(self.equation[-1]) * -1))
+                    self.addPlusMinus()
                 
                 ##################################################
                 # when insert open parenthesis
                 elif self.currentInput == "(":
-                    if self.equation[-1] in self.operators or self.equation[-1] == "(" or self.equation[-1] == "-(" or self.equation[-1] == "√(":
-                        self.equation.append(self.currentInput)
-                        self.parentheses += 1
-                    elif self.equation[-1] == ")":
-                        self.equation.pop()
-                        self.parentheses += 1
-                    else:
-                        res = self.equation[-1]
-                        self.equation[-1] = self.currentInput
-                        self.equation.append(res)
-                        # self.equation.append("×")
-                        # self.equation.append(self.currentInput)
-                        self.parentheses += 1
+                    self.addOpenedParenthesis()
                 
                 ##################################################
                 # when insert close parenthesis
                 elif self.currentInput == ")":
-                    if self.equation[-1] == "(" or self.equation[-1] == "-(" or self.equation[-1] == "√(":
-                        self.equation.pop()
-                        self.parentheses -= 1
-                    elif self.parentheses != 0:
-                        if self.equation[-1] in self.operators:
-                            self.equation.pop()
-                        self.equation.append(self.currentInput)
-                        self.parentheses -= 1
-
+                    self.addClosedParenthesis()
+                    
                 ##################################################
                 # when insert square root sign
                 elif self.currentInput == "√x":
-                    if self.equation[-1] == ")":
-                        left = 0
-                        n = 0
-                        for i in range(-1, -len(self.equation) - 1, -1):
-                            if self.equation[i] == ")":
-                                n += 1
-                            elif self.equation[i] == "(" or self.equation[i] == "-(" or self.equation[i] == "√(":
-                                n -= 1
-                                left = i
-                            if n == 0 and left != 0:
-                                left = i
-                                break
-                        res = self.equation[left:]
-                        self.equation = self.equation[:left]
-                        self.equation.append("√(")
-                        self.equation += res
-                        self.equation.append(")")
-                    elif not (self.equation[-1] in self.operators or self.equation[-1] == "(" or self.equation[-1] == "-(" or self.equation[-1] == "√("):
-                        num = self.equation[-1]
-                        self.equation[-1] = "√("
-                        self.equation.append(num)
-                        self.equation.append(")")
-                    else:
-                        # if not (self.equation[-1] in self.operators or self.equation[-1] == "(" or self.equation[-1] == "-(" or self.equation[-1] == "√("):
-                        #     self.equation.append("×")
-                        self.equation.append("√(")
-                        self.parentheses += 1
+                    self.addSqrt()
                 
                 ##################################################
                 # when insert percent sign
                 elif self.currentInput == "%":
-                    if len(self.equation) > 2:
-                        left = 0
-                        if self.equation[-1] == ")":
-                            # left = 0
-                            n = 0
-                            for i in range(-1, -len(self.equation) - 1, -1):
-                                if self.equation[i] == ")":
-                                    n += 1
-                                elif self.equation[i] == "(" or self.equation[i] == "-(" or self.equation[i] == "√(":
-                                    n -= 1
-                                    left = i
-                                if n == 0 and left != 0:
-                                    left = i
-                                    break
-                            num = self.equation[left:]
-                            oper = self.equation[left - 1]
-                        else:
-                            num = [self.equation[-1]]
-                            oper = self.equation[-2]
-                            left = -1
-                        res = ""
-                        right = left - 1
-                        if self.equation[left - 2] == ")":
-                            # left = 0
-                            n = 0
-                            for i in range(left - 2, -len(self.equation) - 1, -1):
-                                if self.equation[i] == ")":
-                                    n += 1
-                                elif self.equation[i] == "(" or self.equation[i] == "-(" or self.equation[i] == "√(":
-                                    n -= 1
-                                    left = i
-                                if n == 0 and left != 0:
-                                    left = i
-                                    break
-                            res = self.equation[left:right]
-                        else:
-                            res = [self.equation[right - 1]]
-                        if oper == "+" or oper == "-":
-                            self.equation = self.equation[:right + 1]
-                            eq = res + ["×"] + num + ["÷"] + ["100"]
-                            self.equation += [str(self.onCalculate(eq))]
-                        elif oper == "×" or oper == "÷" or oper == "xʸ":
-                            self.equation.append("÷")
-                            self.equation.append("100")
-                    else:
-                        if self.equation[-1] not in self.operators:
-                            self.equation.append("÷")
-                            self.equation.append("100")
-
-        # format equation for display
-        self.temp = ""
-        if self.equation != 0:
-            for i in self.equation:
-                if i in self.operators:
-                    self.temp += " " + i + " "
-                else:
-                    self.temp += i
+                    self.addPercent()
         
-        # reset input to None
+        # always reset input to None
         self.resetInput()
         
-        return self.temp
+        return self.formatEquation(self.equation), self.reset
